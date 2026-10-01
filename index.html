@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مواصلات جاردن والحصري</title>
+    <!-- استدعاء خط Cairo الحديث -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <!-- مكتبة Firebase للربط السحابي -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --radius: 12px;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Cairo', sans-serif;
+        }
+        body {
+            background-color: #f1f5f9;
+            color: var(--dark);
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        header h1 {
+            font-size: 2.2rem;
+            color: var(--primary);
+            font-weight: 900;
+        }
+        header p {
+            font-size: 1rem;
+            color: #475569;
+            margin-top: 5px;
+            font-weight: 700;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        /* تنبيه حالة الطوارئ */
+        #emergency-banner {
+            display: none;
+            background-color: var(--danger);
+            color: white;
+            text-align: center;
+            padding: 15px;
+            border-radius: var(--radius);
+            font-weight: 700;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+        /* نموذج التسجيل */
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: var(--radius);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            margin-bottom: 25px;
+        }
+        .card h2 {
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            color: var(--dark);
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        input, select {
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus {
+            border-color: var(--primary);
+        }
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .btn-success { background-color: var(--secondary); }
+        .btn-danger { background-color: var(--danger); }
+        
+        .form-actions {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        /* الجداول مقسومة نصين (جاردن والحصري) */
+        .tables-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .tables-wrapper {
+                grid-template-columns: 1fr;
+            }
+        }
+        .section-box {
+            background: white;
+            padding: 20px;
+            border-radius: var(--radius);
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        .section-box h3 {
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 8px;
+            border-radius: 8px;
+            color: white;
+        }
+        .garden-title { background-color: var(--secondary); }
+        .hasory-title { background-color: var(--primary); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th {
+            background-color: #f8fafc;
+            font-weight: 700;
+        }
+        
+        /* لوحة الأدمن */
+        .admin-login-bar {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        #admin-panel {
+            display: none;
+            background: #1e293b;
+            color: white;
+            padding: 20px;
+            border-radius: var(--radius);
+            margin-bottom: 25px;
+        }
+        #admin-panel h2 {
+            color: #38bdf8;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 5px;
+        }
+        .admin-controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .admin-box {
+            background: #334155;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .admin-box h4 {
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            color: #f1f5f9;
+        }
+        .stats-text {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #cbd5e1;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- شريط تسجيل دخول الأدمن -->
+        <div class="admin-login-bar">
+            <input type="password" id="admin-pass-input" placeholder="كلمة مرور الأدمن" style="width: 150px; padding: 6px;">
+            <button onclick="toggleAdminPanel()">لوحة التحكم (الأدمن)</button>
+        </div>
+
+        <!-- لوحة تحكم الأدمن -->
+        <div id="admin-panel">
+            <h2>لوحة تحكم الأدمن</h2>
+            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px;">
+                <button id="emergency-btn" class="btn-danger" onclick="toggleEmergency()">إغلاق الحجز طوارئ</button>
+                <span id="emergency-status-text" style="font-weight: bold; color: #4ade80;">الموقع مفتوح حالياً</span>
+            </div>
+
+            <div class="admin-controls-grid">
+                <!-- إحصائيات -->
+                <div class="admin-box">
+                    <h4>الإحصائيات السريعة</h4>
+                    <div id="stats-content" class="stats-text">جاري الحساب...</div>
+                </div>
+
+                <!-- تصدير ومشاركة واتساب -->
+                <div class="admin-box">
+                    <h4>تصدير جدول أو نسخه</h4>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label style="color:#cbd5e1">من الساعة:</label>
+                        <input type="time" id="filter-from" style="padding: 5px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 8px;">
+                        <label style="color:#cbd5e1">إلى الساعة:</label>
+                        <input type="time" id="filter-to" style="padding: 5px;">
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button onclick="exportTableData('text')" style="font-size: 0.8rem; padding: 6px;">نسخ الجدول</button>
+                        <button onclick="exportTableData('csv')" class="btn-success" style="font-size: 0.8rem; padding: 6px;">تحميل CSV</button>
+                    </div>
+                </div>
+
+                <!-- رسائل السائقين -->
+                <div class="admin-box">
+                    <h4>رسائل السائقين الجاهزة (واتساب)</h4>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="generateDriverMessage('جاردن')" class="btn-success" style="flex: 1; font-size: 0.8rem;">سائق جاردن</button>
+                        <button onclick="generateDriverMessage('الحصري')" style="flex: 1; font-size: 0.8rem;">سائق الحصري</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <header>
+            <h1>مواصلات جاردن</h1>
+            <p>تنظيم و متابعة الرحلات (جاردن ⇄ الحصري)</p>
+        </header>
+
+        <!-- تنبيه الطوارئ العام -->
+        <div id="emergency-banner">عذراً، الموقع مغلق مؤقتاً بواسطة الأدمن ولا يمكن التسجيل حالياً.</div>
+
+        <!-- نموذج حجز ركاب جديد -->
+        <div class="card" id="booking-card">
+            <h2>حجز موعد رحلة جديدة</h2>
+            <form id="booking-form" onsubmit="handleBooking(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>الاسم الكامل</label>
+                        <input type="text" id="name" required placeholder="ادخل اسمك">
+                    </div>
+                    <div class="form-group">
+                        <label>رقم التليفون (لإدارة حجزك)</label>
+                        <input type="tel" id="phone" required placeholder="010xxxxxxxx">
+                    </div>
+                    <div class="form-group">
+                        <label>المكان الذي تقف فيه</label>
+                        <input type="text" id="location" required placeholder="مثال: البوابة الرئيسية">
+                    </div>
+                    <div class="form-group">
+                        <label>وقت الركوب</label>
+                        <input type="time" id="time" required>
+                    </div>
+                    <div class="form-group">
+                        <label>الوجهة</label>
+                        <select id="destination">
+                            <option value="جاردن">جاردن</option>
+                            <option value="الحصري">الحصري</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" id="submit-btn">تأكيد الحجز</button>
+                    <span id="user-msg" style="font-size: 0.85rem; color: var(--secondary);"></span>
+                </div>
+            </form>
+        </div>
+
+        <!-- الجداول مقسومة نصين -->
+        <div class="tables-wrapper">
+            <!-- قسم جاردن -->
+            <div class="section-box">
+                <h3 class="garden-title">ركاب جاردن</h3>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>الوقت</th>
+                                <th>الاسم</th>
+                                <th>المكان</th>
+                                <th>الهاتف</th>
+                                <th>إدارة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="garden-tbody">
+                            <!-- تعبئة تلقائية -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- قسم الحصري -->
+            <div class="section-box">
+                <h3 class="hasory-title">ركاب الحصري</h3>
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>الوقت</th>
+                                <th>الاسم</th>
+                                <th>المكان</th>
+                                <th>الهاتف</th>
+                                <th>إدارة</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hasory-tbody">
+                            <!-- تعبئة تلقائية -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // إعدادات قاعدة بيانات Firebase المجانية
+        const firebaseConfig = {
+            databaseURL: "https://mwasalat-garden-default-rtdb.firebaseio.com/"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let allBookings = {};
+        let isAdmin = false;
+        let isClosedEmergency = false;
+
+        // الاستماع المباشر للتغييرات على القاعدة السحابية
+        db.ref('bookings').on('value', (snapshot) => {
+            allBookings = snapshot.val() || {};
+            checkAndCleanupOldBookings(); // الحذف التلقائي بعد نصف ساعة
+            renderTables();
+            updateStats();
+        });
+
+        db.ref('settings').on('value', (snapshot) => {
+            const settings = snapshot.val() || {};
+            isClosedEmergency = settings.closed || false;
+            updateEmergencyUI();
+        });
+
+        // التحقق من الحذف التلقائي للمواعيد التي مر عليها نصف ساعة
+        function checkAndCleanupOldBookings() {
+            const now = new Date();
+            const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
+
+            for (let id in allBookings) {
+                let item = allBookings[id];
+                if (item.time) {
+                    let [h, m] = item.time.split(':').map(Number);
+                    let itemTimeMinutes = h * 60 + m;
+                    
+                    if ((currentTimeMinutes - itemTimeMinutes) > 30) {
+                        db.ref('bookings/' + id).remove();
+                    }
+                }
+            }
+        }
+
+        // التعامل مع إرسال الحجز
+        function handleBooking(event) {
+            event.preventDefault();
+            if (isClosedEmergency && !isAdmin) {
+                alert("عذراً، الموقع مغلق مؤقتاً بواسطة الأدمن.");
+                return;
+            }
+
+            const name = document.getElementById('name').value;
+            const phone = document.getElementById('phone').value;
+            const location = document.getElementById('location').value;
+            const time = document.getElementById('time').value;
+            const destination = document.getElementById('destination').value;
+
+            // حفظ رقم الهاتف محلياً ليتمكن المستخدم من حذف حجزه
+            localStorage.setItem('user_phone', phone);
+
+            const newBookingRef = db.ref('bookings').push();
+            newBookingRef.set({
+                name,
+                phone,
+                location,
+                time,
+                destination,
+                timestamp: Date.now()
+            }, (error) => {
+                if (!error) {
+                    document.getElementById('booking-form').reset();
+                    document.getElementById('user-msg').innerText = "تم تسجيل حجزك بنجاح ويركبه الجميع الآن!";
+                    setTimeout(() => document.getElementById('user-msg').innerText = "", 4000);
+                }
+            });
+        }
+
+        // رسم الجداول وترتيبها تصاعدياً حسب الوقت (الأبدر فوق)
+        function renderTables() {
+            const gardenTbody = document.getElementById('garden-tbody');
+            const hasoryTbody = document.getElementById('hasory-tbody');
+            
+            gardenTbody.innerHTML = '';
+            hasoryTbody.innerHTML = '';
+
+            let bookingsArray = [];
+            for (let id in allBookings) {
+                bookingsArray.push({ id, ...allBookings[id] });
+            }
+
+            // الترتيب حسب الوقت تصاعدياً (الأبدر فوق)
+            bookingsArray.sort((a, b) => a.time.localeCompare(b.time));
+
+            let gardenCount = 0;
+            let hasoryCount = 0;
+
+            bookingsArray.forEach(item => {
+                const tr = document.createElement('tr');
+                const userPhone = localStorage.getItem('user_phone') || "";
+                const canModify = isAdmin || (userPhone === item.phone);
+
+                tr.innerHTML = `
+                    <td><strong>${item.time}</strong></td>
+                    <td>${item.name}</td>
+                    <td>${item.location}</td>
+                    <td>${item.phone}</td>
+                    <td>
+                        <button onclick="deleteBooking('${item.id}', '${item.phone}')" class="btn-danger" style="padding: 3px 8px; font-size: 0.75rem;">حذف</button>
+                    </td>
+                `;
+
+                if (item.destination === 'جاردن') {
+                    gardenTbody.appendChild(tr);
+                    gardenCount++;
+                } else if (item.destination === 'الحصري') {
+                    hasoryTbody.appendChild(tr);
+                    hasoryCount++;
+                }
+            });
+
+            if (gardenCount === 0) gardenTbody.innerHTML = `<tr><td colspan="5" style="color:#888;">لا توجد حجوزات حالياً</td></tr>`;
+            if (hasoryCount === 0) hasoryTbody.innerHTML = `<tr><td colspan="5" style="color:#888;">لا توجد حجوزات حالياً</td></tr>`;
+        }
+
+        // حذف الحجز
+        function deleteBooking(id, phone) {
+            const userPhone = localStorage.getItem('user_phone') || "";
+            if (isAdmin || userPhone === phone) {
+                db.ref('bookings/' + id).remove();
+            } else {
+                let inputPhone = prompt("أدخل رقم التليفون الذي قمت بالتسجيل به لحذف الحجز:");
+                if (inputPhone === phone) {
+                    db.ref('bookings/' + id).remove();
+                } else {
+                    alert("عذراً، رقم التليفون غير مطابق ولا يمكنك حذف حجز شخص آخر.");
+                }
+            }
+        }
+
+        // التحكم كأدمن بكلمة المرور mamafedi
+        function toggleAdminPanel() {
+            const pass = document.getElementById('admin-pass-input').value;
+            if (isAdmin) {
+                isAdmin = false;
+                document.getElementById('admin-panel').style.display = 'none';
+                document.getElementById('admin-pass-input').value = '';
+                alert("تم تسجيل خروج الأدمن.");
+                renderTables();
+                return;
+            }
+
+            if (pass === "mamafedi") {
+                isAdmin = true;
+                document.getElementById('admin-panel').style.display = 'block';
+                alert("مرحباً بك، تم تفعيل لوحة تحكم الأدمن.");
+                renderTables();
+            } else {
+                alert("كلمة مرور الأدمن غير صحيحة!");
+            }
+        }
+
+        // زر الطوارئ
+        function toggleEmergency() {
+            isClosedEmergency = !isClosedEmergency;
+            db.ref('settings').set({ closed: isClosedEmergency });
+        }
+
+        function updateEmergencyUI() {
+            const banner = document.getElementById('emergency-banner');
+            const btn = document.getElementById('emergency-btn');
+            const statusText = document.getElementById('emergency-status-text');
+            const bookingCard = document.getElementById('booking-card');
+
+            if (isClosedEmergency) {
+                banner.style.display = 'block';
+                btn.innerText = "فتح الحجز بالموقع";
+                btn.className = "btn-success";
+                statusText.innerText = "الموقع مغلق حالياً بأمر الأدمن";
+                statusText.style.color = "#f87171";
+                if (!isAdmin) bookingCard.style.opacity = "0.5";
+            } else {
+                banner.style.display = 'none';
+                btn.innerText = "إغلاق الحجز طوارئ";
+                btn.className = "btn-danger";
+                statusText.innerText = "الموقع مفتوح حالياً";
+                statusText.style.color = "#4ade80";
+                bookingCard.style.opacity = "1";
+            }
+        }
+
+        // إحصائيات سريعة
+        function updateStats() {
+            let total = 0;
+            let destCounts = { "جاردن": 0, "الحصري": 0 };
+            let timeSlots = {};
+
+            for (let id in allBookings) {
+                let item = allBookings[id];
+                total++;
+                if (destCounts[item.destination] !== undefined) {
+                    destCounts[item.destination]++;
+                }
+                let hour = item.time.split(':')[0] + ":00";
+                timeSlots[hour] = (timeSlots[hour] || 0) + 1;
+            }
+
+            let peakTime = "لا توجد بيانات";
+            let maxCount = 0;
+            for (let time in timeSlots) {
+                if (timeSlots[time] > maxCount) {
+                    maxCount = timeSlots[time];
+                    peakTime = time;
+                }
+            }
+
+            let topDest = destCounts["جاردن"] >= destCounts["الحصري"] ? "جاردن" : "الحصري";
+            if (total === 0) topDest = "لا توجد";
+
+            document.getElementById('stats-content').innerHTML = `
+                إجمالي المشتركين اليوم: <b>${total} ركاب</b><br>
+                الوجهة الأكثر طلباً: <b>${topDest}</b><br>
+                الفترة الأكثر طلباً: <b>${peakTime}</b>
+            `;
+        }
+
+        // فلترة البيانات
+        function getFilteredBookings() {
+            const fromTime = document.getElementById('filter-from').value;
+            const toTime = document.getElementById('filter-to').value;
+
+            let list = [];
+            for (let id in allBookings) {
+                let item = allBookings[id];
+                if ((!fromTime || item.time >= fromTime) && (!toTime || item.time <= toTime)) {
+                    list.push(item);
+                }
+            }
+            list.sort((a, b) => a.time.localeCompare(b.time));
+            return list;
+        }
+
+        // تصدير جدول البيانات
+        function exportTableData(type) {
+            let list = getFilteredBookings();
+            if (list.length === 0) {
+                alert("لا توجد بيانات في الفترة المحددة!");
+                return;
+            }
+
+            let text = "الوقت\tالاسم\tالمكان\tالهاتف\tالوجهة\n";
+            list.forEach(i => {
+                text += `${i.time}\t${i.name}\t${i.location}\t${i.phone}\t${i.destination}\n`;
+            });
+
+            if (type === 'text') {
+                navigator.clipboard.writeText(text);
+                alert("تم نسخ جدول البيانات بنجاح إلى الحافظة!");
+            } else if (type === 'csv') {
+                let blob = new Blob(["\uFEFF" + text], { type: 'text/csv;charset=utf-8;' });
+                let url = URL.createObjectURL(blob);
+                let a = document.createElement('a');
+                a.href = url;
+                a.download = 'Mwasalat_Garden_Hasory_Data.csv';
+                a.click();
+            }
+        }
+
+        // توليد رسائل السائقين الجاهزة (واتساب)
+        function generateDriverMessage(destination) {
+            let list = getFilteredBookings().filter(i => i.destination === destination);
+            if (list.length === 0) {
+                alert(`لا توجد حجوزات لـ ${destination} في الفترة المحددة!`);
+                return;
+            }
+
+            let msg = `سائق ${destination}، هيركب معك الركاب التاليين:\n`;
+            list.forEach((i, index) => {
+                msg += `${index + 1}. ${i.name} (الساعة ${i.time}) - مكان الانتظار: ${i.location} - ت: ${i.phone}\n`;
+            });
+            msg += `\nمع تحيات مواصلات جاردن (تنظيم و متابعة الرحلات)`;
+
+            navigator.clipboard.writeText(msg);
+            alert(`تم تجهيز رسالة سائق ${destination} ونسخها للحافظة جاهزة للإرسال على واتساب مباشرة!`);
+        }
+    </script>
+</body>
+</html>
+
+
